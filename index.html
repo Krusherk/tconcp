@@ -1,1 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lumma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050508;
+  --text:#f2eeff;
+  --muted:#4a4460;
+  --accent:#b06aff;
+  --accent2:#d4a8ff;
+  --border:rgba(176,106,255,0.12);
+  --border2:rgba(255,255,255,0.06);
+}
+html{scroll-behavior:auto} /* we handle scroll manually */
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Syne',sans-serif;
+  overflow-x:hidden;
+  /* prevent scroll during intro */
+}
+body.locked{overflow:hidden}
 
+/* ═══════════════════════════
+   INTRO OVERLAY
+═══════════════════════════ */
+#intro{
+  position:fixed;inset:0;z-index:200;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);
+  pointer-events:none;
+  transition:opacity .8s ease;
+}
+#intro.done{opacity:0;pointer-events:none}
+#intro-logo{
+  position:absolute;
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(2.2rem,5vw,3.6rem);
+  letter-spacing:-.02em;
+  color:var(--text);
+  opacity:0;
+  transform:scale(.92);
+  transition:opacity .6s ease, transform .6s ease;
+  z-index:10;
+  text-align:center;
+  pointer-events:none;
+  user-select:none;
+}
+#intro-logo.show{opacity:1;transform:scale(1)}
+#intro-canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+}
+
+/* ═══════════════════════════
+   NAV
+═══════════════════════════ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 56px;height:68px;
+  opacity:0;transform:translateY(-8px);
+  transition:opacity .6s,transform .6s,background .4s,border-color .4s,backdrop-filter .4s;
+  border-bottom:1px solid transparent;
+}
+nav.visible{opacity:1;transform:translateY(0)}
+nav.scrolled{
+  background:rgba(5,5,8,.82);
+  backdrop-filter:blur(20px);
+  border-color:var(--border);
+}
+.nav-logo{
+  font-family:'Instrument Serif',serif;
+  font-size:1.5rem;letter-spacing:-.01em;color:var(--text);
+}
+.nav-links{
+  display:flex;gap:40px;list-style:none;
+  position:absolute;left:50%;transform:translateX(-50%);
+}
+.nav-links a{
+  font-size:.78rem;font-weight:400;letter-spacing:.04em;
+  color:var(--muted);text-decoration:none;transition:color .2s;
+}
+.nav-links a:hover{color:var(--text)}
+.nav-right{display:flex;align-items:center;gap:12px}
+.btn-sm{
+  font-family:'Syne',sans-serif;font-size:.76rem;font-weight:700;
+  padding:9px 22px;border-radius:7px;cursor:pointer;border:none;transition:all .22s;
+}
+.btn-sm.ghost{
+  background:none;color:var(--muted);border:1px solid var(--border2);
+}
+.btn-sm.ghost:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+.btn-sm.solid{
+  background:var(--accent);color:#fff;border:1px solid var(--accent);
+}
+.btn-sm.solid:hover{background:#9333ea;border-color:#9333ea}
+
+/* ═══════════════════════════
+   HERO
+═══════════════════════════ */
+#hero{
+  position:relative;
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;
+  padding:100px 48px 80px;
+  overflow:hidden;
+}
+/* The persistent canvas that takes over from intro */
+#hero-canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .5s;
+}
+#hero-canvas.show{opacity:1}
+
+/* vignette so content reads */
+#hero::before{
+  content:'';position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:radial-gradient(ellipse 70% 60% at 50% 50%,
+    transparent 20%, rgba(5,5,8,.75) 65%, var(--bg) 100%);
+}
+.hero-inner{
+  position:relative;z-index:2;
+  opacity:0;transform:translateY(22px);
+  transition:opacity .9s .2s, transform .9s .2s;
+}
+.hero-inner.show{opacity:1;transform:translateY(0)}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:9px;
+  font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent2);
+  border:1px solid rgba(176,106,255,.28);
+  background:rgba(176,106,255,.08);
+  padding:7px 18px;border-radius:100px;margin-bottom:36px;
+}
+.pulse{
+  width:6px;height:6px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 0 rgba(176,106,255,.6);
+  animation:ripple 2s ease-out infinite;
+}
+@keyframes ripple{
+  0%{box-shadow:0 0 0 0 rgba(176,106,255,.6)}
+  70%{box-shadow:0 0 0 8px rgba(176,106,255,0)}
+  100%{box-shadow:0 0 0 0 rgba(176,106,255,0)}
+}
+
+h1{
+  font-family:'Instrument Serif',serif;font-weight:400;
+  font-size:clamp(3.6rem,8.5vw,8rem);
+  line-height:1;letter-spacing:-.03em;
+  margin-bottom:28px;
+}
+h1 em{font-style:italic;color:var(--accent)}
+
+.hero-sub{
+  font-family:'Syne',sans-serif;font-size:clamp(1rem,1.6vw,1.15rem);
+  font-weight:400;line-height:1.75;color:var(--muted);
+  max-width:480px;margin:0 auto 52px;
+}
+.hero-btns{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+}
+.btn-lg{
+  font-family:'Syne',sans-serif;font-size:.88rem;font-weight:700;
+  padding:15px 36px;border-radius:8px;cursor:pointer;border:none;transition:all .22s;
+  letter-spacing:.02em;
+}
+.btn-lg.solid{background:var(--text);color:var(--bg)}
+.btn-lg.solid:hover{background:#ddd5ff}
+.btn-lg.ghost{
+  background:none;color:var(--muted);border:1px solid var(--border2);
+}
+.btn-lg.ghost:hover{color:var(--text);border-color:rgba(255,255,255,.18)}
+
+/* scroll hint */
+.scroll-hint{
+  position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+  z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;
+  opacity:0;transition:opacity .6s 1.5s;
+}
+.scroll-hint.show{opacity:1}
+.scroll-hint span{
+  font-size:.65rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;
+}
+.scroll-track{width:1px;height:44px;background:rgba(255,255,255,.08);position:relative;overflow:hidden}
+.scroll-fill{
+  position:absolute;top:-100%;width:100%;height:100%;
+  background:linear-gradient(to bottom,transparent,var(--accent2));
+  animation:drip 1.6s ease-in-out infinite;
+}
+@keyframes drip{from{top:-100%}to{top:100%}}
+
+/* ═══════════════════════════
+   METRICS BAR
+═══════════════════════════ */
+.metrics-bar{
+  position:relative;z-index:10;
+  border-top:1px solid var(--border2);
+  border-bottom:1px solid var(--border2);
+  display:grid;grid-template-columns:repeat(4,1fr);
+  background:rgba(5,5,8,.6);
+  backdrop-filter:blur(12px);
+}
+.metric-cell{
+  padding:44px 40px;
+  border-right:1px solid var(--border2);
+  opacity:0;transform:translateY(14px);
+  transition:opacity .6s,transform .6s;
+}
+.metric-cell:last-child{border-right:none}
+.metric-cell.vis{opacity:1;transform:none}
+.metric-val{
+  font-family:'Instrument Serif',serif;
+  font-size:2.8rem;letter-spacing:-.03em;color:var(--text);margin-bottom:6px;
+}
+.metric-lbl{font-size:.7rem;font-weight:700;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+
+/* ═══════════════════════════
+   MARQUEE
+═══════════════════════════ */
+.marquee-wrap{
+  border-bottom:1px solid var(--border2);
+  overflow:hidden;padding:14px 0;background:rgba(5,5,8,.4);
+}
+.marquee{display:flex;gap:56px;width:max-content;animation:slide 24s linear infinite}
+.marquee-item{
+  display:flex;align-items:center;gap:11px;white-space:nowrap;
+  font-size:.7rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+}
+.marquee-item svg{width:13px;height:13px;stroke:var(--accent);fill:none;stroke-width:1.5;opacity:.7}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ═══════════════════════════
+   SECTIONS
+═══════════════════════════ */
+.section{max-width:1120px;margin:0 auto;padding:130px 52px}
+.sec-tag{
+  font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent);display:block;margin-bottom:22px;
+}
+.sec-title{
+  font-family:'Instrument Serif',serif;font-weight:400;
+  font-size:clamp(2.4rem,4.5vw,3.8rem);letter-spacing:-.025em;line-height:1.05;
+  margin-bottom:20px;
+}
+.sec-sub{font-size:.92rem;font-weight:400;color:var(--muted);line-height:1.8;max-width:420px}
+
+/* bento */
+.bento{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  grid-template-rows:auto auto;
+  gap:1px;background:var(--border2);
+  border:1px solid var(--border2);border-radius:14px;overflow:hidden;
+  margin-top:60px;
+}
+.bcell{
+  background:#0a0a0f;padding:44px 38px;position:relative;overflow:hidden;
+  transition:background .25s;
+}
+.bcell:hover{background:#0e0e15}
+.bcell.wide{grid-column:span 2}
+.cell-icon{
+  width:38px;height:38px;margin-bottom:28px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:8px;
+  background:rgba(176,106,255,.1);border:1px solid rgba(176,106,255,.2);
+}
+.cell-icon svg{width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:1.5}
+.cell-title{
+  font-family:'Instrument Serif',serif;font-size:1.4rem;
+  letter-spacing:-.015em;margin-bottom:13px;
+}
+.cell-body{font-size:.84rem;font-weight:400;color:var(--muted);line-height:1.8;max-width:310px}
+.mini-chart{margin-top:36px;height:56px;display:flex;align-items:flex-end;gap:4px}
+.bar{flex:1;border-radius:2px 2px 0 0;background:rgba(255,255,255,.04);border-top:1px solid rgba(255,255,255,.07)}
+.bar.hi{background:rgba(176,106,255,.2);border-color:rgba(176,106,255,.4)}
+.cell-glow{
+  position:absolute;right:-60px;bottom:-60px;
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(176,106,255,.12) 0%,transparent 70%);
+  pointer-events:none;
+}
+
+/* how it works */
+.how-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start;margin-top:60px}
+.steps{display:flex;flex-direction:column}
+.step-row{
+  display:flex;gap:24px;padding:30px 0;
+  border-bottom:1px solid var(--border2);
+  transition:padding-left .25s;cursor:default;
+}
+.step-row:first-child{border-top:1px solid var(--border2)}
+.step-row:hover{padding-left:10px}
+.step-n{
+  font-family:'Instrument Serif',serif;font-style:italic;
+  font-size:.95rem;color:var(--accent);min-width:28px;padding-top:2px;
+}
+.step-body h3{font-size:.95rem;font-weight:700;margin-bottom:8px;letter-spacing:.01em}
+.step-body p{font-size:.82rem;font-weight:400;color:var(--muted);line-height:1.75}
+
+.terminal{
+  background:#080810;border:1px solid var(--border2);border-radius:11px;overflow:hidden;
+}
+.t-bar{
+  display:flex;align-items:center;gap:7px;padding:13px 18px;
+  border-bottom:1px solid var(--border2);background:#0c0c18;
+}
+.td{width:9px;height:9px;border-radius:50%}
+.td.r{background:#ff5f57}.td.y{background:#febc2e}.td.g{background:#28c840}
+.t-body{padding:26px 24px;font-family:'Syne',monospace}
+.tl{
+  font-size:.74rem;font-weight:400;line-height:2;color:var(--muted);
+  opacity:0;transform:translateX(-5px);transition:opacity .35s,transform .35s;
+}
+.tl.show{opacity:1;transform:none}
+.tl .pr{color:var(--accent);margin-right:9px}
+.tl .ok{color:#34d399}
+.tcursor{
+  display:inline-block;width:6px;height:12px;
+  background:var(--accent);margin-left:2px;margin-bottom:-2px;
+  animation:blink 1s step-end infinite;
+}
+@keyframes blink{50%{opacity:0}}
+
+/* cta */
+.cta-wrap{max-width:1120px;margin:0 auto;padding:0 52px 140px}
+.cta-box{
+  border:1px solid var(--border2);border-radius:16px;overflow:hidden;
+  position:relative;padding:110px 80px;text-align:center;background:#0a0a0f;
+}
+.cta-box::before{
+  content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:500px;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(176,106,255,.35),transparent);
+}
+.cta-box::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 50% at 50% -10%,rgba(176,106,255,.07) 0%,transparent 65%);
+  pointer-events:none;
+}
+.cta-box h2{
+  font-family:'Instrument Serif',serif;font-weight:400;
+  font-size:clamp(2.2rem,4vw,3.6rem);letter-spacing:-.025em;
+  margin-bottom:16px;position:relative;z-index:1;
+}
+.cta-box p{font-size:.9rem;font-weight:400;color:var(--muted);margin-bottom:48px;position:relative;z-index:1}
+.cta-form{display:flex;justify-content:center;gap:10px;position:relative;z-index:1}
+.cta-input{
+  font-family:'Syne',sans-serif;font-size:.82rem;font-weight:400;
+  background:rgba(255,255,255,.04);border:1px solid var(--border2);
+  color:var(--text);padding:13px 22px;border-radius:8px;width:280px;
+  outline:none;transition:border .2s;
+}
+.cta-input::placeholder{color:var(--muted)}
+.cta-input:focus{border-color:rgba(176,106,255,.4)}
+
+footer{
+  border-top:1px solid var(--border2);padding:40px 56px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.f-logo{font-family:'Instrument Serif',serif;font-size:1.2rem;color:var(--text)}
+.f-links{display:flex;gap:32px;list-style:none}
+.f-links a{font-size:.74rem;font-weight:700;color:var(--muted);text-decoration:none;transition:color .2s}
+.f-links a:hover{color:var(--text)}
+.f-copy{font-size:.7rem;color:#222}
+
+/* reveal */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .7s,transform .7s}
+.reveal.vis{opacity:1;transform:none}
+</style>
+</head>
+<body class="locked">
+
+<!-- ═══ INTRO OVERLAY ═══ -->
+<div id="intro">
+  <canvas id="intro-canvas"></canvas>
+  <div id="intro-logo">Lumma</div>
+</div>
+
+<!-- ═══ NAV ═══ -->
+<nav id="nav">
+  <div class="nav-logo">Lumma</div>
+  <ul class="nav-links">
+    <li><a href="#protocol">Protocol</a></li>
+    <li><a href="#how">Developers</a></li>
+    <li><a href="#community">Community</a></li>
+    <li><a href="#">Blog</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="btn-sm ghost">Docs</button>
+    <button class="btn-sm solid">Launch App</button>
+  </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-inner" id="hero-inner">
+    <div class="hero-badge"><span class="pulse"></span>Mainnet Live</div>
+    <h1>Move value at<br>the <em>speed of thought.</em></h1>
+    <p class="hero-sub">Lumma is a decentralised settlement layer built for the next generation of on-chain activity. Fast, private, and fully open.</p>
+    <div class="hero-btns">
+      <button class="btn-lg solid">Launch App</button>
+      <button class="btn-lg ghost">Read the docs →</button>
+    </div>
+  </div>
+  <div class="scroll-hint" id="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-track"><div class="scroll-fill"></div></div>
+  </div>
+</section>
+
+<!-- ═══ METRICS ═══ -->
+<div class="metrics-bar">
+  <div class="metric-cell"><div class="metric-val">$2.4B+</div><div class="metric-lbl">Total Value Locked</div></div>
+  <div class="metric-cell"><div class="metric-val">140ms</div><div class="metric-lbl">Average Finality</div></div>
+  <div class="metric-cell"><div class="metric-val">98K+</div><div class="metric-lbl">Active Wallets</div></div>
+  <div class="metric-cell"><div class="metric-val">0</div><div class="metric-lbl">Security Exploits</div></div>
+</div>
+
+<!-- ═══ MARQUEE ═══ -->
+<div class="marquee-wrap">
+  <div class="marquee">
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Zero-knowledge proofs</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Non-custodial</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>Cross-chain liquidity</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>DAO governed</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>EVM compatible</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/></svg>Real-time settlement</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Zero-knowledge proofs</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Non-custodial</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg>Cross-chain liquidity</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>DAO governed</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>EVM compatible</div>
+    <div class="marquee-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4"/></svg>Real-time settlement</div>
+  </div>
+</div>
+
+<!-- ═══ FEATURES ═══ -->
+<div class="section" id="protocol">
+  <div class="reveal">
+    <span class="sec-tag">Protocol</span>
+    <h2 class="sec-title">Infrastructure that doesn't<br>get in your way.</h2>
+    <p class="sec-sub">Every component is open, audited, and built for developers who know what they're doing.</p>
+  </div>
+  <div class="bento reveal">
+    <div class="bcell wide">
+      <div class="cell-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+      <div class="cell-title">Modular by design</div>
+      <p class="cell-body">Compose your own stack with plug-and-play modules. Take what you need. No bloat, no lock-in, no surprises.</p>
+      <div class="mini-chart">
+        <div class="bar" style="height:30%"></div><div class="bar" style="height:48%"></div>
+        <div class="bar" style="height:38%"></div><div class="bar hi" style="height:78%"></div>
+        <div class="bar hi" style="height:95%"></div><div class="bar hi" style="height:84%"></div>
+        <div class="bar" style="height:68%"></div><div class="bar" style="height:58%"></div>
+        <div class="bar hi" style="height:100%"></div><div class="bar" style="height:74%"></div>
+        <div class="bar" style="height:62%"></div><div class="bar hi" style="height:90%"></div>
+      </div>
+    </div>
+    <div class="bcell">
+      <div class="cell-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+      <div class="cell-title">Privacy-first</div>
+      <p class="cell-body">ZK-proofs at the core. Prove without revealing. Your on-chain footprint belongs to you.</p>
+      <div class="cell-glow"></div>
+    </div>
+    <div class="bcell">
+      <div class="cell-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></div>
+      <div class="cell-title">Omnichain</div>
+      <p class="cell-body">Native bridges to Ethereum, Solana, Cosmos and beyond. Lumma speaks every chain's language.</p>
+    </div>
+    <div class="bcell">
+      <div class="cell-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div class="cell-title">Sub-second finality</div>
+      <p class="cell-body">Settle in 140ms on average. Your users never wait, ever.</p>
+    </div>
+    <div class="bcell">
+      <div class="cell-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <div class="cell-title">DAO governed</div>
+      <p class="cell-body">No hidden stakeholders. Every protocol decision goes to a vote.</p>
+    </div>
+    <div class="bcell">
+      <div class="cell-icon"><svg viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></div>
+      <div class="cell-title">Developer APIs</div>
+      <p class="cell-body">Clean SDKs, comprehensive docs, staging network. Ship without fear.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ HOW IT WORKS ═══ -->
+<div class="section" id="how" style="padding-top:0">
+  <div class="reveal">
+    <span class="sec-tag">How it works</span>
+    <h2 class="sec-title">Three steps to<br>on-chain sovereignty.</h2>
+  </div>
+  <div class="how-grid reveal">
+    <div class="steps">
+      <div class="step-row">
+        <div class="step-n">01</div>
+        <div class="step-body">
+          <h3>Connect your wallet</h3>
+          <p>WalletConnect, MetaMask, Phantom and 40+ others. One click, no setup required.</p>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-n">02</div>
+        <div class="step-body">
+          <h3>Configure your parameters</h3>
+          <p>Choose chains, set slippage tolerances, configure privacy preferences. Full control, zero compromises.</p>
+        </div>
+      </div>
+      <div class="step-row">
+        <div class="step-n">03</div>
+        <div class="step-body">
+          <h3>Transact freely</h3>
+          <p>Swap, bridge, stake and earn — from a single interface. Lumma handles the complexity.</p>
+        </div>
+      </div>
+    </div>
+    <div class="terminal" id="term">
+      <div class="t-bar"><div class="td r"></div><div class="td y"></div><div class="td g"></div></div>
+      <div class="t-body">
+        <div class="tl"><span class="pr">$</span>lumma init --chain ethereum</div>
+        <div class="tl" style="color:#2a2440">  Connecting to RPC...</div>
+        <div class="tl"><span class="ok">✓</span> Chain connected <span style="color:#2a2440">(140ms)</span></div>
+        <div class="tl" style="opacity:.08">​</div>
+        <div class="tl"><span class="pr">$</span>lumma bridge --from eth --to sol --amount 2.5</div>
+        <div class="tl" style="color:#2a2440">  Generating ZK proof...</div>
+        <div class="tl" style="color:#2a2440">  Submitting transaction...</div>
+        <div class="tl"><span class="ok">✓</span> Bridged 2.5 ETH → SOL <span style="color:#2a2440">[0x4f2a…c91b]</span></div>
+        <div class="tl" style="opacity:.08">​</div>
+        <div class="tl"><span class="pr">$</span><span class="tcursor"></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CTA ═══ -->
+<div class="cta-wrap" id="community">
+  <div class="cta-box reveal">
+    <h2>Get early access.</h2>
+    <p>Join the Lumma waitlist. No spam — just protocol updates.</p>
+    <div class="cta-form">
+      <input class="cta-input" type="email" placeholder="your@address.eth"/>
+      <button class="btn-lg solid">Join waitlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer>
+  <div class="f-logo">Lumma</div>
+  <ul class="f-links">
+    <li><a href="#">Protocol</a></li>
+    <li><a href="#">Docs</a></li>
+    <li><a href="#">Twitter</a></li>
+    <li><a href="#">Discord</a></li>
+    <li><a href="#">GitHub</a></li>
+  </ul>
+  <div class="f-copy">© 2025 Lumma Protocol</div>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════
+   PARTICLE SYSTEM
+═══════════════════════════════════════════ */
+const N_PARTICLES = 2200;
+
+// Build fibonacci sphere positions (unit sphere)
+function fibSphere(n){
+  const pts=[];
+  for(let i=0;i<n;i++){
+    const phi=Math.acos(1-2*(i+.5)/n);
+    const theta=Math.PI*(1+Math.sqrt(5))*i;
+    pts.push([
+      Math.sin(phi)*Math.cos(theta),
+      Math.sin(phi)*Math.sin(theta),
+      Math.cos(phi)
+    ]);
+  }
+  return pts;
+}
+
+const spherePts = fibSphere(N_PARTICLES);
+
+// Particle data
+const particles = spherePts.map((p,i)=>{
+  const isPurple = Math.random()<.55;
+  return {
+    // target (sphere) position — unit sphere coords
+    tx:p[0], ty:p[1], tz:p[2],
+    // current position starts at centre
+    cx:0, cy:0, cz:0,
+    // display
+    size: Math.random()*.9+.35,
+    alpha: Math.random()*.5+.25,
+    isPurple,
+    // slight phase offset for organic feel
+    phase: Math.random()*Math.PI*2,
+    speed: .025+Math.random()*.015,
+  };
+});
+
+/* ─── INTRO CANVAS ─── */
+const introEl   = document.getElementById('intro');
+const introC    = document.getElementById('intro-canvas');
+const introCtx  = introC.getContext('2d');
+const introLogo = document.getElementById('intro-logo');
+
+let IW,IH;
+function resizeIntro(){
+  const dpr=devicePixelRatio||1;
+  IW=innerWidth; IH=innerHeight;
+  introC.width=IW*dpr; introC.height=IH*dpr;
+  introCtx.scale(dpr,dpr);
+}
+resizeIntro();
+
+/* ─── HERO CANVAS ─── */
+const heroC   = document.getElementById('hero-canvas');
+const heroCtx = heroC.getContext('2d');
+let HW,HH;
+function resizeHero(){
+  const dpr=devicePixelRatio||1;
+  const rect=document.getElementById('hero').getBoundingClientRect();
+  HW=rect.width; HH=rect.height;
+  heroC.width=HW*dpr; heroC.height=HH*dpr;
+  heroCtx.scale(dpr,dpr);
+}
+resizeHero();
+window.addEventListener('resize',()=>{resizeIntro();resizeHero()});
+
+/* ─── STATE MACHINE ─── */
+// Phase 0: particles scattered (off-screen random positions)
+// Phase 1: contract inward → form sphere (intro)
+// Phase 2: sphere formed, logo visible, idle spin
+// Phase 3: fade intro, hand off to hero canvas, expand on scroll
+
+let phase=0;
+let t=0;            // global tick
+let introProgress=0; // 0→1: how contracted the sphere is
+let logoAlpha=0;
+let rotY=0, rotX=0;
+let mouse={x:0,y:0};
+let heroStarted=false;
+let heroExpand=0;    // 0→1: how expanded (driven by scroll)
+let introFading=false;
+let introDone=false;
+let RAF;
+
+// Random scatter positions for each particle (off-screen)
+const scatter = particles.map(()=>({
+  x:(Math.random()-.5)*3,
+  y:(Math.random()-.5)*3,
+  z:(Math.random()-.5)*3,
+}));
+
+document.addEventListener('mousemove',e=>{
+  mouse.x=(e.clientX/IW-.5)*2;
+  mouse.y=(e.clientY/IH-.5)*2;
+});
+
+/* ─── DRAW INTRO ─── */
+function drawIntro(){
+  introCtx.clearRect(0,0,IW,IH);
+  const cx=IW/2, cy=IH/2;
+  const R=Math.min(IW,IH)*.3;
+  const p=introProgress; // 0=scattered, 1=sphere
+
+  const rY=rotY+mouse.x*.25;
+  const rX=rotX+mouse.y*.15;
+  const cY=Math.cos(rY),sY=Math.sin(rY);
+  const cX=Math.cos(rX),sX=Math.sin(rX);
+
+  // Build projected list
+  const list=particles.map((pt,i)=>{
+    // interpolate between scatter and sphere
+    const bx=scatter[i].x*(1-p)+pt.tx*p;
+    const by=scatter[i].y*(1-p)+pt.ty*p;
+    const bz=scatter[i].z*(1-p)+pt.tz*p;
+
+    // rotate
+    let x=bx,y=by,z=bz;
+    let x2=x*cY+z*sY, z2=-x*sY+z*cY; x=x2; z=z2;
+    let y2=y*cX-z*sX, z3=y*sX+z*cX;  y=y2; z=z3;
+
+    const sx=cx+x*R, sy=cy+y*R;
+    const depth=(z+1)/2;
+    return {sx,sy,depth,pt};
+  });
+  list.sort((a,b)=>a.depth-b.depth);
+
+  list.forEach(({sx,sy,depth,pt})=>{
+    const a=pt.alpha*(0.15+depth*.85);
+    let color;
+    if(pt.isPurple){
+      const rv=Math.round(110+depth*90), gv=Math.round(20+depth*30), bv=Math.round(180+depth*75);
+      color=`rgba(${rv},${gv},${bv},${a})`;
+    } else {
+      const lv=Math.round(160+depth*95);
+      color=`rgba(${lv},${lv},${lv},${a*0.8})`;
+    }
+    introCtx.beginPath();
+    introCtx.arc(sx,sy,pt.size*(0.3+depth*.85),0,Math.PI*2);
+    introCtx.fillStyle=color;
+    introCtx.fill();
+  });
+}
+
+/* ─── DRAW HERO (expanded orb behind content) ─── */
+function drawHero(){
+  heroCtx.clearRect(0,0,HW,HH);
+  const cx=HW/2, cy=HH/2;
+  // base radius + expansion based on scroll
+  const baseR=Math.min(HW,HH)*.3;
+  const maxR=Math.min(HW,HH)*1.1;
+  const R=baseR+(maxR-baseR)*heroExpand;
+
+  const rY=rotY+mouse.x*.2;
+  const rX=rotX*0.5+mouse.y*.12;
+  const cY=Math.cos(rY),sY=Math.sin(rY);
+  const cX=Math.cos(rX),sX=Math.sin(rX);
+
+  const list=particles.map((pt)=>{
+    let x=pt.tx,y=pt.ty,z=pt.tz;
+    let x2=x*cY+z*sY,z2=-x*sY+z*cY; x=x2; z=z2;
+    let y2=y*cX-z*sX,z3=y*sX+z*cX;  y=y2; z=z3;
+    const sx=cx+x*R, sy=cy+y*R;
+    const depth=(z+1)/2;
+    return {sx,sy,depth,pt};
+  });
+  list.sort((a,b)=>a.depth-b.depth);
+
+  // fade out particles as they expand (sparse field)
+  const fadeAlpha=Math.max(0,1-heroExpand*.6);
+
+  list.forEach(({sx,sy,depth,pt})=>{
+    const a=pt.alpha*(0.1+depth*.9)*fadeAlpha;
+    let color;
+    if(pt.isPurple){
+      const rv=Math.round(100+depth*80), gv=Math.round(15+depth*25), bv=Math.round(170+depth*85);
+      color=`rgba(${rv},${gv},${bv},${a})`;
+    } else {
+      const lv=Math.round(150+depth*105);
+      color=`rgba(${lv},${lv},${lv},${a*0.75})`;
+    }
+    heroCtx.beginPath();
+    heroCtx.arc(sx,sy,pt.size*(0.35+depth*.8),0,Math.PI*2);
+    heroCtx.fillStyle=color;
+    heroCtx.fill();
+  });
+}
+
+/* ─── MAIN LOOP ─── */
+function loop(){
+  RAF=requestAnimationFrame(loop);
+  t++;
+  rotY+=.004;
+
+  if(!introDone){
+    // Phase: contract particles into sphere over ~130 frames
+    if(introProgress<1){
+      introProgress=Math.min(1, introProgress+.008);
+    }
+    // Show logo once sphere is ~60% formed
+    if(introProgress>.58 && logoAlpha<1){
+      logoAlpha=Math.min(1,logoAlpha+.04);
+      introLogo.style.opacity=logoAlpha;
+      introLogo.style.transform=`scale(${.9+logoAlpha*.1})`;
+      if(logoAlpha>.05) introLogo.classList.add('show');
+    }
+    // Hold for a beat then allow scroll
+    if(introProgress>=1 && !introFading){
+      // after ~60 frames of hold, unlock
+      if(!introEl._holdTick) introEl._holdTick=t;
+      if(t-introEl._holdTick>70){
+        introFading=true;
+        // unlock scroll
+        document.body.classList.remove('locked');
+        // show nav + hero content
+        document.getElementById('nav').classList.add('visible');
+        document.getElementById('hero-inner').classList.add('show');
+        document.getElementById('scroll-hint').classList.add('show');
+        // fade out intro overlay
+        introEl.classList.add('done');
+        // show hero canvas
+        heroC.classList.add('show');
+        setTimeout(()=>{ introDone=true; introEl.style.display='none'; },900);
+      }
+    }
+    drawIntro();
+  } else {
+    // update hero expand from scroll
+    const scrollFrac=Math.min(1,scrollY/(innerHeight*.9));
+    heroExpand+=(scrollFrac-heroExpand)*.06;
+    drawHero();
+  }
+}
+loop();
+
+/* ─── NAV SCROLL ─── */
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled',scrollY>50);
+});
+
+/* ─── REVEAL ─── */
+const ro=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('vis'); });
+},{threshold:.1});
+document.querySelectorAll('.reveal,.metric-cell').forEach(el=>ro.observe(el));
+
+document.querySelectorAll('.metric-cell').forEach((el,i)=>{
+  el.style.transitionDelay=i*80+'ms';
+});
+
+/* ─── TERMINAL ─── */
+const term=document.getElementById('term');
+const to=new IntersectionObserver(entries=>{
+  if(!entries[0].isIntersecting)return;
+  to.disconnect();
+  term.querySelectorAll('.tl').forEach((l,i)=>setTimeout(()=>l.classList.add('show'),i*210));
+},{threshold:.3});
+to.observe(term);
+</script>
+</body>
+</html>
